@@ -1,10 +1,18 @@
-# My First Project
+# Warehouse Management System (Tier 2)
 
-This is my first Python program. It asks the user for their name and prints a greeting.
+This program simulates a warehouse using FIFO (First In, First Out).
 
 ## Features
-- Takes user input
-- Displays a personalized greeting
+- Add stock in batches
+- Remove stock using FIFO logic
+- Display current stock and total quantity
 
-## Author
-Promise
+## How it works
+Each batch is stored as an object.  
+When removing stock, the system always removes from the oldest batch first.
+
+## How to run
+Run the file:
+wms.py
+
+Then follow the menu instructions.
