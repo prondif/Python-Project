@@ -48,6 +48,8 @@ def main():
                 remove_signal = client.read_symbol(REMOTE_REMOVE)
             except Exception:
                 continue
+           
+            print(send_signal, release_signal, remove_signal)
 
             if send_signal:
                 warehouse.add_item("item", 1)
