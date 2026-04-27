@@ -18,9 +18,9 @@ PLC_PORT = 851
 LOCAL_NET_ID = "127.0.0.1.1.2"
 
 
-# ADS symbols
+# ADS symbols (correct)
 REMOTE_SEND = ADSSymbol("Remote.send_pallet", BOOL)
-REMOTE_RELEASE = ADSSymbol("Remote.release_from_imaging", BOOL)
+REMOTE_RELEASE = ADSSymbol("Remote.release_pallet", BOOL)
 REMOTE_REMOVE = ADSSymbol("Remote.return_pallet", BOOL)
 
 
@@ -48,7 +48,8 @@ def main():
                 remove_signal = client.read_symbol(REMOTE_REMOVE)
             except Exception:
                 continue
-           
+
+            # temporary debug (remove later)
             print(send_signal, release_signal, remove_signal)
 
             if send_signal:
