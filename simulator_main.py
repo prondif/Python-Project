@@ -11,15 +11,16 @@ except ModuleNotFoundError:
     sys.exit(1)
 
 
-# 🔌 Connection settings (must match simulator)
+# Connection settings
 PLC_IP = "127.0.0.1"
 PLC_NET_ID = "127.0.0.1.1.1"
 PLC_PORT = 851
 LOCAL_NET_ID = "127.0.0.1.1.2"
 
 
-# 🎯 ADS symbols (same as reference)
+# ADS symbols
 REMOTE_SEND = ADSSymbol("Remote.send_pallet", BOOL)
+REMOTE_RELEASE = ADSSymbol("Remote.release_from_imaging", BOOL)
 REMOTE_REMOVE = ADSSymbol("Remote.return_pallet", BOOL)
 
 
@@ -28,7 +29,6 @@ def main():
     client = ADSClient(local_ams_net_id=LOCAL_NET_ID)
 
     try:
-        # 🔗 Connect to simulator
         client.open(
             target_ip=PLC_IP,
             target_ams_net_id=PLC_NET_ID,
@@ -37,7 +37,6 @@ def main():
 
         device_info = client.read_device_info()
         print(f"Connected to: {device_info.device_name}")
-
         print("Waiting for signals...")
 
         while True:
@@ -45,18 +44,20 @@ def main():
 
             try:
                 send_signal = client.read_symbol(REMOTE_SEND)
+                release_signal = client.read_symbol(REMOTE_RELEASE)
                 remove_signal = client.read_symbol(REMOTE_REMOVE)
             except Exception:
-                # avoid crashing if read fails momentarily
                 continue
 
-            # ➕ ADD ITEM
             if send_signal:
                 warehouse.add_item("item", 1)
                 print("Item added:", warehouse.get_stock())
                 client.write_symbol(REMOTE_SEND, False)
 
-            # ➖ REMOVE ITEM
+            if release_signal:
+                print("Pallet released from imaging")
+                client.write_symbol(REMOTE_RELEASE, False)
+
             if remove_signal:
                 success = warehouse.remove_item("item", 1)
                 if success:
