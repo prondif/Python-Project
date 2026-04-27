@@ -11,12 +11,14 @@ except ModuleNotFoundError:
     sys.exit(1)
 
 
+# 🔌 Connection settings (must match simulator)
 PLC_IP = "127.0.0.1"
 PLC_NET_ID = "127.0.0.1.1.1"
 PLC_PORT = 851
 LOCAL_NET_ID = "127.0.0.1.1.2"
 
-# Use same symbols as reference
+
+# 🎯 ADS symbols (same as reference)
 REMOTE_SEND = ADSSymbol("Remote.send_pallet", BOOL)
 REMOTE_REMOVE = ADSSymbol("Remote.return_pallet", BOOL)
 
@@ -26,22 +28,41 @@ def main():
     client = ADSClient(local_ams_net_id=LOCAL_NET_ID)
 
     try:
-        client.open(target_ip=PLC_IP, target_ams_net_id=PLC_NET_ID, target_ams_port=PLC_PORT)
-        print("Connected to simulator")
+        # 🔗 Connect to simulator
+        client.open(
+            target_ip=PLC_IP,
+            target_ams_net_id=PLC_NET_ID,
+            target_ams_port=PLC_PORT
+        )
+
+        device_info = client.read_device_info()
+        print(f"Connected to: {device_info.device_name}")
+
+        print("Waiting for signals...")
 
         while True:
-            sleep(0.5)
+            sleep(0.2)
 
-            # Add item when simulator sends signal
-            if client.read_symbol(REMOTE_SEND):
+            try:
+                send_signal = client.read_symbol(REMOTE_SEND)
+                remove_signal = client.read_symbol(REMOTE_REMOVE)
+            except Exception:
+                # avoid crashing if read fails momentarily
+                continue
+
+            # ➕ ADD ITEM
+            if send_signal:
                 warehouse.add_item("item", 1)
                 print("Item added:", warehouse.get_stock())
                 client.write_symbol(REMOTE_SEND, False)
 
-            # Remove item when simulator sends signal
-            if client.read_symbol(REMOTE_REMOVE):
+            # ➖ REMOVE ITEM
+            if remove_signal:
                 success = warehouse.remove_item("item", 1)
-                print("Removed" if success else "Not enough stock")
+                if success:
+                    print("Item removed:", warehouse.get_stock())
+                else:
+                    print("Not enough stock")
                 client.write_symbol(REMOTE_REMOVE, False)
 
     except Exception as exc:
@@ -49,6 +70,7 @@ def main():
 
     finally:
         client.close()
+        print("Connection closed")
 
 
 if __name__ == "__main__":
