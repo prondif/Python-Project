@@ -108,12 +108,8 @@ def auto_transfer(client, warehouse):
     sleep(0.4)  # give simulator time
 
     # STEP 2: remove from warehouse AFTER transfer
+    
     warehouse.remove_item(item, 1)
-
-    # STEP 3: return pallet to home
-    client.write_symbol(REMOTE_RETURN_PALLET, True)
-
-    sleep(0.5)  # allow movement
 
 # ---------------- MAIN ----------------
 def main() -> None:
@@ -161,9 +157,10 @@ def main() -> None:
             # Transfer at imaging
             elif state == 120:
                 auto_transfer(client, warehouse)
-                sleep(0.2)
-                client.write_symbol(REMOTE_RETURN_PALLET, True)
 
+            elif state == 140:
+                print("At transfer slot → returning home")
+                client.write_symbol(REMOTE_RETURN_PALLET, True)
             sleep(0.2)
 
     except Exception as exc:
