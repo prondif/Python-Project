@@ -86,11 +86,18 @@ def auto_transfer(client, warehouse):
 
     print(f"Auto transferring 1 of {item}")
 
-    # IMPORTANT: safe coordinates for simulator
-    client.write_symbol(REMOTE_SRC_X, 0.0)
-    client.write_symbol(REMOTE_SRC_Y, 0.0)
-    client.write_symbol(REMOTE_DST_X, 0.0)
-    client.write_symbol(REMOTE_DST_Y, 0.0)
+    # SOURCE = imaging position (NOT home)
+    src_x = 160.0
+    src_y = 260.0   # imaging height
+
+    # DESTINATION = transfer area
+    dst_x = 160.0
+    dst_y = 300.0
+
+    client.write_symbol(REMOTE_SRC_X, src_x)
+    client.write_symbol(REMOTE_SRC_Y, src_y)
+    client.write_symbol(REMOTE_DST_X, dst_x)
+    client.write_symbol(REMOTE_DST_Y, dst_y)
 
     sleep(0.1)
     client.write_symbol(REMOTE_TRANSFER_ITEM, True)
