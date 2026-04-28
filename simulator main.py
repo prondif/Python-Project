@@ -37,14 +37,18 @@ class Warehouse:
         self.stock = {}
 
     def add_item(self, name, qty):
+        name = name.strip().lower()
         self.stock[name] = self.stock.get(name, 0) + qty
         print(f"Added {qty} of {name}")
 
     def remove_item(self, name, qty):
+        name = name.strip().lower()
+
         if name not in self.stock or self.stock[name] < qty:
             return False
 
         self.stock[name] -= qty
+
         if self.stock[name] == 0:
             del self.stock[name]
 
@@ -58,6 +62,9 @@ class Warehouse:
 
     def get_stock(self):
         return self.stock
+
+    def has_stock(self):
+        return len(self.stock) > 0
 
 
 # ---------------- STATE PRINT ----------------
@@ -83,11 +90,11 @@ def auto_transfer(client, warehouse):
 
     if not item:
         print("No stock available")
-        return
+        return False
 
     print(f"Auto transferring 1 of {item}")
 
-    # Imaging position (where block is)
+    # Imaging position
     src_x = 160.0
     src_y = 260.0
 
@@ -102,21 +109,22 @@ def auto_transfer(client, warehouse):
 
     sleep(0.2)
 
-    # STEP 1: transfer item
+    # Transfer
     client.write_symbol(REMOTE_TRANSFER_ITEM, True)
 
-    sleep(0.4)  # give simulator time
+    sleep(0.4)
 
-    # STEP 2: remove from warehouse AFTER transfer
-    
+    # Remove AFTER successful transfer
     warehouse.remove_item(item, 1)
+
+    return True
+
 
 # ---------------- MAIN ----------------
 def main() -> None:
     client = ADSClient(local_ams_net_id=LOCAL_NET_ID)
     warehouse = Warehouse()
 
-    # Initial input (for demo)
     item = input("Enter item name: ")
     qty = int(input("Enter quantity: "))
     warehouse.add_item(item, qty)
@@ -140,7 +148,6 @@ def main() -> None:
         pallet_sent = False
         transfer_done = False
 
-        # SINGLE LOOP
         while True:
             state = client.read_symbol(CONVEYOR_STATE)
 
@@ -148,24 +155,26 @@ def main() -> None:
                 print_state(state)
                 state_prev = state
 
-            # Send pallet only once at home
+            # HOME → send pallet
             if state == 101 and not pallet_sent:
                 if warehouse.has_stock():
                     print("Stock available -> sending pallet")
                     client.write_symbol(REMOTE_SEND_PALLET, True)
                     pallet_sent = True
+                    transfer_done = False
 
-                transfer_done = False
+            # IMAGING → transfer ONCE
+            elif state == 120 and pallet_sent and not transfer_done:
+                success = auto_transfer(client, warehouse)
+                if success:
+                    transfer_done = True
 
-            # Transfer at imaging
-            elif state == 120 and not transfer_done:
-                auto_transfer(client, warehouse)
-                transfer_done = True
-
-            elif state == 140:
+            # SLOT → return pallet ONCE
+            elif state == 140 and pallet_sent:
                 print("Returning pallet to home")
                 client.write_symbol(REMOTE_RETURN_PALLET, True)
                 pallet_sent = False
+
             sleep(0.2)
 
     except Exception as exc:
