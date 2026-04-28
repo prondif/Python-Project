@@ -23,6 +23,7 @@ LOCAL_NET_ID = "127.0.0.1.1.2"
 
 CONVEYOR_STATE = ADSSymbol("StatusVars.ConveyorState", INT)
 REMOTE_SEND_PALLET = ADSSymbol("Remote.send_pallet", BOOL)
+REMOTE_RETURN_PALLET = ADSSymbol("Remote.return_pallet", BOOL)
 REMOTE_TRANSFER_ITEM = ADSSymbol("Remote.transfer_item", BOOL)
 REMOTE_SRC_X = ADSSymbol("Remote.src_x", LREAL)
 REMOTE_SRC_Y = ADSSymbol("Remote.src_y", LREAL)
@@ -86,9 +87,11 @@ def auto_transfer(client, warehouse):
 
     print(f"Auto transferring 1 of {item}")
 
+    # Imaging position (where block is)
     src_x = 160.0
     src_y = 260.0
 
+    # Transfer position
     dst_x = 160.0
     dst_y = 200.0
 
@@ -97,10 +100,20 @@ def auto_transfer(client, warehouse):
     client.write_symbol(REMOTE_DST_X, dst_x)
     client.write_symbol(REMOTE_DST_Y, dst_y)
 
-    sleep(0.1)
+    sleep(0.2)
+
+    # STEP 1: transfer item
     client.write_symbol(REMOTE_TRANSFER_ITEM, True)
 
+    sleep(0.4)  # give simulator time
+
+    # STEP 2: remove from warehouse AFTER transfer
     warehouse.remove_item(item, 1)
+
+    # STEP 3: return pallet to home
+    client.write_symbol(REMOTE_RETURN_PALLET, True)
+
+    sleep(0.5)  # allow movement
 
 # ---------------- MAIN ----------------
 def main() -> None:
@@ -147,9 +160,9 @@ def main() -> None:
 
             # Transfer at imaging
             elif state == 120:
-               if warehouse.has_stock():
-                   auto_transfer(client, warehouse)
-                   pallet_sent = False
+                auto_transfer(client, warehouse)
+                sleep(0.2)
+                client.write_symbol(REMOTE_RETURN_PALLET, True)
 
             sleep(0.2)
 
