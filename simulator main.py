@@ -138,6 +138,7 @@ def main() -> None:
 
         state_prev = None
         pallet_sent = False
+        transfer_done = False
 
         # SINGLE LOOP
         while True:
@@ -149,18 +150,22 @@ def main() -> None:
 
             # Send pallet only once at home
             if state == 101 and not pallet_sent:
-                if warehouse.get_stock():
+                if warehouse.has_stock():
                     print("Stock available -> sending pallet")
                     client.write_symbol(REMOTE_SEND_PALLET, True)
                     pallet_sent = True
 
+                transfer_done = False
+
             # Transfer at imaging
-            elif state == 120:
+            elif state == 120 and not transfer_done:
                 auto_transfer(client, warehouse)
+                transfer_done = True
 
             elif state == 140:
-                print("At transfer slot → returning home")
+                print("Returning pallet to home")
                 client.write_symbol(REMOTE_RETURN_PALLET, True)
+                pallet_sent = False
             sleep(0.2)
 
     except Exception as exc:
