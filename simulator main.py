@@ -107,12 +107,12 @@ def auto_transfer(client, warehouse):
     client.write_symbol(REMOTE_DST_X, dst_x)
     client.write_symbol(REMOTE_DST_Y, dst_y)
 
-    sleep(0.2)
+    sleep(0.5)
 
     # Transfer
     client.write_symbol(REMOTE_TRANSFER_ITEM, True)
 
-    sleep(0.4)
+    sleep(0.7)
 
     # Remove AFTER successful transfer
     warehouse.remove_item(item, 1)
@@ -165,12 +165,13 @@ def main() -> None:
 
             # IMAGING → transfer ONCE
             elif state == 120 and pallet_sent and not transfer_done:
+                sleep(0.3)
                 success = auto_transfer(client, warehouse)
                 if success:
                     transfer_done = True
 
             # SLOT → return pallet ONCE
-            elif state == 140 and pallet_sent:
+            elif state == 140 and pallet_sent and transfer_done:
                 print("Returning pallet to home")
                 client.write_symbol(REMOTE_RETURN_PALLET, True)
                 pallet_sent = False
