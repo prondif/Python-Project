@@ -10,14 +10,19 @@ except ModuleNotFoundError:
     print("Missing dependency: py_ads_client")
     sys.exit(1)
 
+
+# Connection settings
 PLC_IP = "127.0.0.1"
 PLC_NET_ID = "127.0.0.1.1.1"
 PLC_PORT = 851
 LOCAL_NET_ID = "127.0.0.1.1.2"
 
+
+# Correct ADS symbols (USE THESE)
 REMOTE_SEND = ADSSymbol("Remote.send_pallet", BOOL)
-REMOTE_RELEASE = ADSSymbol("Remote.release_from_imaging", BOOL)
+REMOTE_RELEASE = ADSSymbol("Remote.release_pallet", BOOL)
 REMOTE_REMOVE = ADSSymbol("Remote.return_pallet", BOOL)
+
 
 def main():
     warehouse = Warehouse()
@@ -44,13 +49,16 @@ def main():
             except Exception:
                 continue
 
+            # TEMP DEBUG (keep for now)
+            print(send_signal, release_signal, remove_signal)
+
             if send_signal:
                 warehouse.add_item("item", 1)
                 print("Item added:", warehouse.get_stock())
                 client.write_symbol(REMOTE_SEND, False)
 
             if release_signal:
-                print("Pallet released from imaging")
+                print("Pallet released")
                 client.write_symbol(REMOTE_RELEASE, False)
 
             if remove_signal:
@@ -67,6 +75,7 @@ def main():
     finally:
         client.close()
         print("Connection closed")
+
 
 if __name__ == "__main__":
     main()
