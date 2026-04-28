@@ -11,17 +11,17 @@ except ModuleNotFoundError:
     sys.exit(1)
 
 
-# Connection settings
 PLC_IP = "127.0.0.1"
 PLC_NET_ID = "127.0.0.1.1.1"
 PLC_PORT = 851
 LOCAL_NET_ID = "127.0.0.1.1.2"
 
 
-# Correct ADS symbols (USE THESE)
-REMOTE_SEND = ADSSymbol("Remote.send_pallet", BOOL)
-REMOTE_RELEASE = ADSSymbol("Remote.release_pallet", BOOL)
-REMOTE_REMOVE = ADSSymbol("Remote.return_pallet", BOOL)
+# Try BOTH possible names (no guessing anymore)
+SEND_SYMBOL = ADSSymbol("Remote.send_pallet", BOOL)
+RELEASE_SYMBOL_1 = ADSSymbol("Remote.release_pallet", BOOL)
+RELEASE_SYMBOL_2 = ADSSymbol("Remote.release_from_imaging", BOOL)
+REMOVE_SYMBOL = ADSSymbol("Remote.return_pallet", BOOL)
 
 
 def main():
@@ -40,26 +40,50 @@ def main():
         print("Waiting for signals...")
 
         while True:
-            sleep(0.2)
+            sleep(0.5)
 
+            # READ SEND
             try:
-                send_signal = client.read_symbol(REMOTE_SEND)
-                release_signal = client.read_symbol(REMOTE_RELEASE)
-                remove_signal = client.read_symbol(REMOTE_REMOVE)
+                send_signal = client.read_symbol(SEND_SYMBOL)
+            except Exception as e:
+                print("SEND ERROR:", e)
+                send_signal = False
+
+            # READ RELEASE (try both)
+            release_signal = False
+            try:
+                release_signal = client.read_symbol(RELEASE_SYMBOL_1)
             except Exception:
-                continue
+                try:
+                    release_signal = client.read_symbol(RELEASE_SYMBOL_2)
+                except Exception as e:
+                    print("RELEASE ERROR:", e)
 
-            # TEMP DEBUG (keep for now)
-            print(send_signal, release_signal, remove_signal)
+            # READ REMOVE
+            try:
+                remove_signal = client.read_symbol(REMOVE_SYMBOL)
+            except Exception as e:
+                print("REMOVE ERROR:", e)
+                remove_signal = False
 
+            # ALWAYS PRINT (no more silence)
+            print("Signals:", send_signal, release_signal, remove_signal)
+
+            # LOGIC
             if send_signal:
                 warehouse.add_item("item", 1)
                 print("Item added:", warehouse.get_stock())
-                client.write_symbol(REMOTE_SEND, False)
+                client.write_symbol(SEND_SYMBOL, False)
 
             if release_signal:
                 print("Pallet released")
-                client.write_symbol(REMOTE_RELEASE, False)
+                try:
+                    client.write_symbol(RELEASE_SYMBOL_1, False)
+                except Exception:
+                    try:
+                        client.write_symbol(RELEASE_SYMBOL_2, False)
+                    except Exception:
+                        pass
 
             if remove_signal:
                 success = warehouse.remove_item("item", 1)
@@ -67,10 +91,10 @@ def main():
                     print("Item removed:", warehouse.get_stock())
                 else:
                     print("Not enough stock")
-                client.write_symbol(REMOTE_REMOVE, False)
+                client.write_symbol(REMOVE_SYMBOL, False)
 
     except Exception as exc:
-        print(f"Error: {exc}")
+        print(f"Fatal Error: {exc}")
 
     finally:
         client.close()
