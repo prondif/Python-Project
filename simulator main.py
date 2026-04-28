@@ -125,9 +125,9 @@ def main() -> None:
     client = ADSClient(local_ams_net_id=LOCAL_NET_ID)
     warehouse = Warehouse()
 
-    # Initial stock
-    warehouse.add_item("a", 5)
-    warehouse.add_item("b", 3)
+    item = input("Enter item name: ")
+    qty = int(input("Enter quantity: "))
+    warehouse.add_item(item, qty)
 
     try:
         client.open(
