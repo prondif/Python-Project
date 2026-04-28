@@ -100,6 +100,29 @@ def print_state(state: int) -> None:
         case _:
             print("Unknown state")
 
+def auto_transfer(client, warehouse):
+    stock = warehouse.get_stock()
+
+    if not stock:
+        print("No stock available for auto transfer")
+        return
+
+    item_name = list(stock.keys())[0]
+
+    if warehouse.remove_item(item_name, 1):
+        print(f"Auto transferring 1 of {item_name}")
+
+        src_x, src_y = 0.0, 0.0
+        dst_x, dst_y = 1.0, 1.0
+
+        client.write_symbol(REMOTE_SRC_X, src_x)
+        client.write_symbol(REMOTE_SRC_Y, src_y)
+        client.write_symbol(REMOTE_DST_X, dst_x)
+        client.write_symbol(REMOTE_DST_Y, dst_y)
+
+        sleep(0.1)
+        client.write_symbol(REMOTE_TRANSFER_ITEM, True)
+
 
 # ---------------- MAIN PROGRAM ----------------
 def main() -> None:
@@ -135,7 +158,9 @@ def main() -> None:
                     state_prev = state
 
                 if state in [101, 120, 140]:
-                    break
+                   # AUTO MODE TRIGGER
+                   auto_transfer(client, warehouse)
+                   break
 
                 sleep(0.2)
 
