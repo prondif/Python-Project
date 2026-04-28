@@ -86,11 +86,9 @@ def auto_transfer(client, warehouse):
 
     print(f"Auto transferring 1 of {item}")
 
-    # SOURCE = imaging position (where block actually is)
     src_x = 160.0
     src_y = 260.0
 
-    # DESTINATION = transfer area (slightly above)
     dst_x = 160.0
     dst_y = 200.0
 
