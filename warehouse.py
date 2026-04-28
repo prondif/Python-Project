@@ -8,7 +8,6 @@ class Warehouse:
         self.stock = {}
 
     def add_item(self, name: str, quantity: int) -> None:
-        """Add items to warehouse"""
         name = name.strip().lower()
 
         if quantity <= 0:
@@ -19,7 +18,6 @@ class Warehouse:
         print(f"Added {quantity} of {name}")
 
     def remove_item(self, name: str, quantity: int) -> bool:
-        """Remove items from warehouse"""
         name = name.strip().lower()
 
         if quantity <= 0:
@@ -42,18 +40,18 @@ class Warehouse:
         print(f"Removed {quantity} of {name}")
         return True
 
-    def get_stock(self) -> dict:
-        """Return stock dictionary"""
-        return self.stock
+    def has_stock(self) -> bool:
+        return bool(self.stock)
 
     def get_any_item(self):
-        """Return one available item name (for auto-transfer)"""
         if not self.stock:
             return None
         return next(iter(self.stock))
 
+    def get_stock(self) -> dict:
+        return self.stock
+
     def show_stock(self) -> None:
-        """Print current warehouse stock"""
         print("\nWarehouse Stock:")
 
         if not self.stock:

@@ -1,4 +1,4 @@
-"""Simple interactive ADS tester + Tier 1 Warehouse system"""
+"""Fully automatic ADS + Tier 1 Warehouse system"""
 
 from __future__ import annotations
 
@@ -125,6 +125,10 @@ def main() -> None:
     client = ADSClient(local_ams_net_id=LOCAL_NET_ID)
     warehouse = Warehouse()
 
+    # Initial stock
+    warehouse.add_item("a", 5)
+    warehouse.add_item("b", 3)
+
     try:
         client.open(
             target_ip=PLC_IP,
@@ -143,8 +147,13 @@ def main() -> None:
         state_prev = None
 
         while True:
-            print("\nWaiting for system ready...")
-            sleep(1)
+
+            if not warehouse.stock:
+                print("\nNo more stock. System stopping.")
+                break
+
+            print("\nStock available → sending pallet")
+            client.write_symbol(REMOTE_SEND_PALLET, True)
 
             while True:
                 state = client.read_symbol(CONVEYOR_STATE)
@@ -159,73 +168,7 @@ def main() -> None:
 
                 sleep(0.2)
 
-            print("\n====== MENU ======")
-            print("1 - Send pallet (Add stock)")
-            print("2 - Release pallet from imaging")
-            print("3 - Return pallet")
-            print("4 - Transfer item (Remove stock)")
-            print("5 - Add stock manually")
-            print("6 - Remove stock manually")
-            print("7 - Show stock")
-            print("9 - Quit")
-
-            try:
-                sel = int(input("Select: "))
-            except ValueError:
-                print("Invalid input")
-                continue
-
-            match sel:
-
-                case 1:
-                    item = input("Item name: ")
-                    qty = int(input("Quantity: "))
-                    warehouse.add_item(item, qty)
-                    client.write_symbol(REMOTE_SEND_PALLET, True)
-
-                case 2:
-                    client.write_symbol(REMOTE_RELEASE_FROM_IMAGING, True)
-
-                case 3:
-                    client.write_symbol(REMOTE_RETURN_PALLET, True)
-
-                case 4:
-                    item = input("Item name: ")
-                    qty = int(input("Quantity: "))
-
-                    if warehouse.remove_item(item, qty):
-                        src_x = float(input("Source x: "))
-                        src_y = float(input("Source y: "))
-                        dst_x = float(input("Destination x: "))
-                        dst_y = float(input("Destination y: "))
-
-                        client.write_symbol(REMOTE_SRC_X, src_x)
-                        client.write_symbol(REMOTE_SRC_Y, src_y)
-                        client.write_symbol(REMOTE_DST_X, dst_x)
-                        client.write_symbol(REMOTE_DST_Y, dst_y)
-
-                        sleep(0.1)
-                        client.write_symbol(REMOTE_TRANSFER_ITEM, True)
-
-                case 5:
-                    item = input("Item name: ")
-                    qty = int(input("Quantity: "))
-                    warehouse.add_item(item, qty)
-
-                case 6:
-                    item = input("Item name: ")
-                    qty = int(input("Quantity: "))
-                    warehouse.remove_item(item, qty)
-
-                case 7:
-                    warehouse.show_stock()
-
-                case 9:
-                    print("Exiting...")
-                    break
-
-                case _:
-                    print("Invalid selection")
+            sleep(0.5)
 
     except Exception as exc:
         print(f"Error: {exc}")
