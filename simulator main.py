@@ -12,10 +12,6 @@ except ModuleNotFoundError as exc:
         raise
 
     print("Missing dependency: py_ads_client")
-    print("Run the tester with the project virtual environment:")
-    print(r"  .\.venv\Scripts\python.exe .\simple_interface_tester.py")
-    print("If needed, install dependencies first:")
-    print(r"  .\.venv\Scripts\python.exe -m pip install -e .[dev]")
     sys.exit(1)
 
 
@@ -100,14 +96,14 @@ def print_state(state: int) -> None:
         case _:
             print("Unknown state")
 
-def auto_transfer(client, warehouse):
-    stock = warehouse.get_stock()
 
-    if not stock:
+# ---------------- AUTO TRANSFER ----------------
+def auto_transfer(client, warehouse):
+    if not warehouse.stock:
         print("No stock available for auto transfer")
         return
 
-    item_name = list(stock.keys())[0]
+    item_name = next(iter(warehouse.stock))
 
     if warehouse.remove_item(item_name, 1):
         print(f"Auto transferring 1 of {item_name}")
@@ -158,9 +154,8 @@ def main() -> None:
                     state_prev = state
 
                 if state in [101, 120, 140]:
-                   # AUTO MODE TRIGGER
-                   auto_transfer(client, warehouse)
-                   break
+                    auto_transfer(client, warehouse)
+                    break
 
                 sleep(0.2)
 
