@@ -86,13 +86,13 @@ def auto_transfer(client, warehouse):
 
     print(f"Auto transferring 1 of {item}")
 
-    # SOURCE = imaging position (NOT home)
+    # SOURCE = imaging position (where block actually is)
     src_x = 160.0
-    src_y = 260.0   # imaging height
+    src_y = 260.0
 
-    # DESTINATION = transfer area
+    # DESTINATION = transfer area (slightly above)
     dst_x = 160.0
-    dst_y = 300.0
+    dst_y = 200.0
 
     client.write_symbol(REMOTE_SRC_X, src_x)
     client.write_symbol(REMOTE_SRC_Y, src_y)
@@ -103,7 +103,6 @@ def auto_transfer(client, warehouse):
     client.write_symbol(REMOTE_TRANSFER_ITEM, True)
 
     warehouse.remove_item(item, 1)
-
 
 # ---------------- MAIN ----------------
 def main() -> None:
@@ -150,8 +149,9 @@ def main() -> None:
 
             # Transfer at imaging
             elif state == 120:
-                auto_transfer(client, warehouse)
-                pallet_sent = False
+               if warehouse.has_stock():
+                   auto_transfer(client, warehouse)
+                   pallet_sent = False
 
             sleep(0.2)
 
