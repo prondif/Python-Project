@@ -41,15 +41,14 @@ class Warehouse:
         return True
 
     def has_stock(self) -> bool:
-        return bool(self.stock)
+        """Check if any stock exists"""
+        return len(self.stock) > 0
 
     def get_any_item(self):
+        """Get one item name for auto transfer"""
         if not self.stock:
             return None
         return next(iter(self.stock))
-
-    def get_stock(self) -> dict:
-        return self.stock
 
     def show_stock(self) -> None:
         print("\nWarehouse Stock:")
