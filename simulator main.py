@@ -23,8 +23,6 @@ LOCAL_NET_ID = "127.0.0.1.1.2"
 
 CONVEYOR_STATE = ADSSymbol("StatusVars.ConveyorState", INT)
 REMOTE_SEND_PALLET = ADSSymbol("Remote.send_pallet", BOOL)
-REMOTE_RELEASE_FROM_IMAGING = ADSSymbol("Remote.release_from_imaging", BOOL)
-REMOTE_RETURN_PALLET = ADSSymbol("Remote.return_pallet", BOOL)
 REMOTE_TRANSFER_ITEM = ADSSymbol("Remote.transfer_item", BOOL)
 REMOTE_SRC_X = ADSSymbol("Remote.src_x", LREAL)
 REMOTE_SRC_Y = ADSSymbol("Remote.src_y", LREAL)
@@ -32,99 +30,80 @@ REMOTE_DST_X = ADSSymbol("Remote.dst_x", LREAL)
 REMOTE_DST_Y = ADSSymbol("Remote.dst_y", LREAL)
 
 
-# ---------------- WAREHOUSE LOGIC ----------------
+# ---------------- WAREHOUSE ----------------
 class Warehouse:
     def __init__(self):
         self.stock = {}
 
     def add_item(self, name, qty):
-        if name in self.stock:
-            self.stock[name] += qty
-        else:
-            self.stock[name] = qty
+        self.stock[name] = self.stock.get(name, 0) + qty
         print(f"Added {qty} of {name}")
 
     def remove_item(self, name, qty):
-        if name not in self.stock:
-            print("Item not found")
-            return False
-
-        if self.stock[name] < qty:
-            print("Not enough stock")
+        if name not in self.stock or self.stock[name] < qty:
             return False
 
         self.stock[name] -= qty
-
         if self.stock[name] == 0:
             del self.stock[name]
 
         print(f"Removed {qty} of {name}")
         return True
 
-    def show_stock(self):
-        print("\nWarehouse Stock:")
+    def get_any_item(self):
         if not self.stock:
-            print("Empty")
-        else:
-            for name, qty in self.stock.items():
-                print(f"{name}: {qty}")
+            return None
+        return next(iter(self.stock))
+
+    def get_stock(self):
+        return self.stock
 
 
-# ---------------- STATE PRINTING ----------------
+# ---------------- STATE PRINT ----------------
 def print_state(state: int) -> None:
-    match state:
-        case 0:
-            print("s000_initialize")
-        case 1:
-            print("s001_not_homed")
-        case 10:
-            print("s010_homing")
-        case 100:
-            print("s100_braking")
-        case 101:
-            print("s101_waiting_at_home")
-        case 110:
-            print("s110_moving_to_imaging")
-        case 120:
-            print("s120_imaging")
-        case 130:
-            print("s130_moving_to_slot")
-        case 140:
-            print("s140_waiting_in_slot")
-        case 150:
-            print("s150_moving_to_home")
-        case _:
-            print("Unknown state")
+    states = {
+        0: "s000_initialize",
+        1: "s001_not_homed",
+        10: "s010_homing",
+        100: "s100_braking",
+        101: "s101_waiting_at_home",
+        110: "s110_moving_to_imaging",
+        120: "s120_imaging",
+        130: "s130_moving_to_slot",
+        140: "s140_waiting_in_slot",
+        150: "s150_moving_to_home",
+    }
+    print(states.get(state, "Unknown state"))
 
 
 # ---------------- AUTO TRANSFER ----------------
 def auto_transfer(client, warehouse):
-    if not warehouse.stock:
-        print("No stock available for auto transfer")
+    item = warehouse.get_any_item()
+
+    if not item:
+        print("No stock available")
         return
 
-    item_name = next(iter(warehouse.stock))
+    print(f"Auto transferring 1 of {item}")
 
-    if warehouse.remove_item(item_name, 1):
-        print(f"Auto transferring 1 of {item_name}")
+    # IMPORTANT: safe coordinates for simulator
+    client.write_symbol(REMOTE_SRC_X, 0.0)
+    client.write_symbol(REMOTE_SRC_Y, 0.0)
+    client.write_symbol(REMOTE_DST_X, 0.0)
+    client.write_symbol(REMOTE_DST_Y, 0.0)
 
-        src_x, src_y = 0.0, 0.0
-        dst_x, dst_y = 1.0, 1.0
+    sleep(0.1)
+    client.write_symbol(REMOTE_TRANSFER_ITEM, True)
 
-        client.write_symbol(REMOTE_SRC_X, src_x)
-        client.write_symbol(REMOTE_SRC_Y, src_y)
-        client.write_symbol(REMOTE_DST_X, dst_x)
-        client.write_symbol(REMOTE_DST_Y, dst_y)
-
-        sleep(0.1)
-        client.write_symbol(REMOTE_TRANSFER_ITEM, True)
+    warehouse.remove_item(item, 1)
 
 
-# ---------------- MAIN PROGRAM ----------------
+# ---------------- MAIN ----------------
 def main() -> None:
     client = ADSClient(local_ams_net_id=LOCAL_NET_ID)
     warehouse = Warehouse()
 
+    # Initial input (for demo)
     item = input("Enter item name: ")
     qty = int(input("Enter quantity: "))
     warehouse.add_item(item, qty)
@@ -145,30 +124,29 @@ def main() -> None:
         )
 
         state_prev = None
+        pallet_sent = False
 
+        # SINGLE LOOP
         while True:
+            state = client.read_symbol(CONVEYOR_STATE)
 
-            if not warehouse.stock:
-                print("\nNo more stock. System stopping.")
-                break
+            if state != state_prev:
+                print_state(state)
+                state_prev = state
 
-            print("\nStock available → sending pallet")
-            client.write_symbol(REMOTE_SEND_PALLET, True)
+            # Send pallet only once at home
+            if state == 101 and not pallet_sent:
+                if warehouse.get_stock():
+                    print("Stock available -> sending pallet")
+                    client.write_symbol(REMOTE_SEND_PALLET, True)
+                    pallet_sent = True
 
-            while True:
-                state = client.read_symbol(CONVEYOR_STATE)
+            # Transfer at imaging
+            elif state == 120:
+                auto_transfer(client, warehouse)
+                pallet_sent = False
 
-                if state != state_prev:
-                    print_state(state)
-                    state_prev = state
-
-                if state in [101, 120, 140]:
-                    auto_transfer(client, warehouse)
-                    break
-
-                sleep(0.2)
-
-            sleep(0.5)
+            sleep(0.2)
 
     except Exception as exc:
         print(f"Error: {exc}")
