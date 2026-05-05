@@ -36,11 +36,15 @@ REMOTE_DST_Y = ADSSymbol("Remote.dst_y", LREAL)
 
 # ---------------- STORAGE SLOTS ----------------
 STORAGE_SLOTS = [
-    (200.0, 200.0),
-    (240.0, 200.0),
+    (300.0, 200.0),
+    (340.0, 200.0),
 ]
 
 slot_index = 0
+
+# Control exact number of cycles
+MAX_ITEMS = 2
+processed_items = 0
 
 
 # ---------------- WAREHOUSE ----------------
@@ -91,7 +95,7 @@ def print_state(state: int) -> None:
 
 # ---------------- AUTO TRANSFER ----------------
 def auto_transfer(client, warehouse):
-    global slot_index
+    global slot_index, processed_items
 
     item = warehouse.get_any_item()
     if not item:
@@ -117,6 +121,7 @@ def auto_transfer(client, warehouse):
     sleep(0.5)
 
     warehouse.remove_item(item, 1)
+    processed_items += 1
 
     return True
 
@@ -185,9 +190,9 @@ def main() -> None:
 
             sleep(0.3)
 
-            # STOP CONDITION
-            if not warehouse.has_stock() and not pallet_sent:
-                print("All items stored. Program ending.")
+            # STOP AFTER EXACTLY 2 TRANSFERS
+            if processed_items >= MAX_ITEMS:
+                print("Processed 2 items. Stopping.")
                 break
 
     except KeyboardInterrupt:
