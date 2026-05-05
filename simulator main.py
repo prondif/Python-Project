@@ -34,15 +34,16 @@ REMOTE_DST_X = ADSSymbol("Remote.dst_x", LREAL)
 REMOTE_DST_Y = ADSSymbol("Remote.dst_y", LREAL)
 
 
-# ---------------- STORAGE SLOTS ----------------
+# ---------------- STORAGE (TOP BOX) ----------------
+# Tuned for your simulator (top-right area)
 STORAGE_SLOTS = [
-    (300.0, 200.0),
-    (340.0, 200.0),
+    (260.0, 120.0),
+    (300.0, 120.0),
 ]
 
 slot_index = 0
 
-# Control exact number of cycles
+# Control number of runs
 MAX_ITEMS = 2
 processed_items = 0
 
@@ -103,13 +104,15 @@ def auto_transfer(client, warehouse):
 
     print(f"Auto transferring 1 of {item}")
 
+    # FROM imaging
     src_x = 160.0
     src_y = 260.0
 
+    # TO storage (top box)
     dst_x, dst_y = STORAGE_SLOTS[slot_index % len(STORAGE_SLOTS)]
     slot_index += 1
 
-    print(f"Storing at: ({dst_x}, {dst_y})")
+    print(f"Moving to storage at ({dst_x}, {dst_y})")
 
     client.write_symbol(REMOTE_SRC_X, src_x)
     client.write_symbol(REMOTE_SRC_Y, src_y)
@@ -117,8 +120,10 @@ def auto_transfer(client, warehouse):
     client.write_symbol(REMOTE_DST_Y, dst_y)
 
     sleep(0.3)
+
     client.write_symbol(REMOTE_TRANSFER_ITEM, True)
-    sleep(0.5)
+
+    sleep(0.6)
 
     warehouse.remove_item(item, 1)
     processed_items += 1
@@ -151,7 +156,9 @@ def main() -> None:
         transfer_done = False
         released = False
 
-        while True:
+        # CONTROLLED LOOP (NO INFINITE LOOP)
+        while processed_items < MAX_ITEMS:
+
             state = client.read_symbol(CONVEYOR_STATE)
 
             if state != state_prev:
@@ -159,8 +166,8 @@ def main() -> None:
                 state_prev = state
 
             # HOME
-            if state == 101 and not pallet_sent and warehouse.has_stock():
-                print("Sending pallet")
+            if state == 101 and not pallet_sent:
+                print("Sending pallet to imaging")
                 client.write_symbol(REMOTE_SEND_PALLET, True)
 
                 pallet_sent = True
@@ -169,6 +176,7 @@ def main() -> None:
 
             # IMAGING
             elif state == 120:
+
                 if not released:
                     print("Releasing pallet")
                     client.write_symbol(REMOTE_RELEASE, True)
@@ -180,9 +188,9 @@ def main() -> None:
                     if success:
                         transfer_done = True
 
-            # SLOT
+            # SLOT (after storage)
             elif state == 140 and pallet_sent:
-                print("Returning pallet")
+                print("Returning pallet to home")
                 client.write_symbol(REMOTE_RETURN_PALLET, True)
 
                 pallet_sent = False
@@ -190,13 +198,10 @@ def main() -> None:
 
             sleep(0.3)
 
-            # STOP AFTER EXACTLY 2 TRANSFERS
-            if processed_items >= MAX_ITEMS:
-                print("Processed 2 items. Stopping.")
-                break
+        print("Processed 2 items. Program finished.")
 
     except KeyboardInterrupt:
-        print("\nProgram stopped by user")
+        print("\nStopped by user")
 
     except Exception as exc:
         print(f"Error: {exc}")

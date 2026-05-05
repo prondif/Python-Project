@@ -1,13 +1,8 @@
 class Warehouse:
-    """
-    Simple Tier 1 warehouse:
-    Tracks items in bulk (name -> quantity)
-    """
-
     def __init__(self):
         self.stock = {}
 
-    def add_item(self, name: str, qty: int) -> None:
+    def add_item(self, name, qty):
         name = name.strip().lower()
 
         if qty <= 0:
@@ -17,7 +12,7 @@ class Warehouse:
         self.stock[name] = self.stock.get(name, 0) + qty
         print(f"Added {qty} of {name}")
 
-    def remove_item(self, name: str, qty: int) -> bool:
+    def remove_item(self, name, qty):
         name = name.strip().lower()
 
         if name not in self.stock:
@@ -37,20 +32,17 @@ class Warehouse:
         return True
 
     def get_any_item(self):
-        """Returns any available item name"""
         if not self.stock:
             return None
         return next(iter(self.stock))
 
-    def has_stock(self) -> bool:
-        """Check if warehouse still has items"""
+    def has_stock(self):
         return len(self.stock) > 0
 
     def show_stock(self):
-        """Optional: for debugging/demo"""
+        print("\nWarehouse Stock:")
         if not self.stock:
-            print("Warehouse empty")
+            print("Empty")
         else:
-            print("Warehouse stock:")
             for name, qty in self.stock.items():
                 print(f"{name}: {qty}")
