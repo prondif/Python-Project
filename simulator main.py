@@ -34,6 +34,16 @@ REMOTE_DST_X = ADSSymbol("Remote.dst_x", LREAL)
 REMOTE_DST_Y = ADSSymbol("Remote.dst_y", LREAL)
 
 
+# ---------------- STORAGE SLOTS ----------------
+# These are safe positions inside the storage area
+STORAGE_SLOTS = [
+    (200.0, 200.0),
+    (240.0, 200.0),
+]
+
+slot_index = 0
+
+
 # ---------------- WAREHOUSE ----------------
 class Warehouse:
     def __init__(self):
@@ -82,6 +92,8 @@ def print_state(state: int) -> None:
 
 # ---------------- AUTO TRANSFER ----------------
 def auto_transfer(client, warehouse):
+    global slot_index
+
     item = warehouse.get_any_item()
 
     if not item:
@@ -94,21 +106,22 @@ def auto_transfer(client, warehouse):
     src_x = 160.0
     src_y = 260.0
 
-    # Transfer position
-    dst_x = 160.0
-    dst_y = 200.0
+    # Pick next storage slot
+    dst_x, dst_y = STORAGE_SLOTS[slot_index % len(STORAGE_SLOTS)]
+    slot_index += 1
+
+    print(f"Storing at: ({dst_x}, {dst_y})")
 
     client.write_symbol(REMOTE_SRC_X, src_x)
     client.write_symbol(REMOTE_SRC_Y, src_y)
     client.write_symbol(REMOTE_DST_X, dst_x)
     client.write_symbol(REMOTE_DST_Y, dst_y)
 
-    sleep(0.2)
+    sleep(0.3)
 
-    # Transfer item
     client.write_symbol(REMOTE_TRANSFER_ITEM, True)
 
-    sleep(0.4)
+    sleep(0.5)
 
     warehouse.remove_item(item, 1)
 
@@ -120,10 +133,9 @@ def main() -> None:
     client = ADSClient(local_ams_net_id=LOCAL_NET_ID)
     warehouse = Warehouse()
 
-    # Initial input
-    item = input("Enter item name: ")
-    qty = int(input("Enter quantity: "))
-    warehouse.add_item(item, qty)
+    # Demo setup (2 items)
+    warehouse.add_item("a", 2)
+    print("Demo mode: loaded 2 items")
 
     try:
         client.open(
@@ -154,11 +166,10 @@ def main() -> None:
                 state_prev = state
 
             # ---------------- HOME ----------------
-            if state == 101 and not pallet_sent:
-                if warehouse.has_stock():
-                    print("Sending pallet to imaging")
-                    client.write_symbol(REMOTE_SEND_PALLET, True)
-                    pallet_sent = True
+            if state == 101 and not pallet_sent and warehouse.has_stock():
+                print("Sending pallet to imaging")
+                client.write_symbol(REMOTE_SEND_PALLET, True)
+                pallet_sent = True
 
                 transfer_done = False
                 released = False
@@ -166,14 +177,14 @@ def main() -> None:
             # ---------------- IMAGING ----------------
             elif state == 120:
 
-                # STEP 1: release pallet
+                # Step 1: release pallet
                 if not released:
                     print("Releasing pallet from imaging")
                     client.write_symbol(REMOTE_RELEASE, True)
                     sleep(0.3)
                     released = True
 
-                # STEP 2: transfer item
+                # Step 2: transfer item
                 elif not transfer_done:
                     success = auto_transfer(client, warehouse)
                     if success:
@@ -184,8 +195,14 @@ def main() -> None:
                 print("Returning pallet to home")
                 client.write_symbol(REMOTE_RETURN_PALLET, True)
                 pallet_sent = False
+                sleep(1.0)  # slow down for demo
 
             sleep(0.2)
+
+            # STOP when done
+            if not warehouse.has_stock():
+                print("All items stored. Stopping system.")
+                break
 
     except Exception as exc:
         print(f"Error: {exc}")
