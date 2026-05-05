@@ -1,4 +1,4 @@
-"""Fully automatic ADS + Tier 1 Warehouse system"""
+"""Fully automatic ADS + Tier 1 Warehouse system (final version)"""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ REMOTE_DST_X = ADSSymbol("Remote.dst_x", LREAL)
 REMOTE_DST_Y = ADSSymbol("Remote.dst_y", LREAL)
 
 
-# ---------------- STORAGE SLOTS (TOP BOX) ----------------
+# ---------------- STORAGE (TOP BOX) ----------------
 STORAGE_SLOTS = [
     (260.0, 120.0),
     (300.0, 120.0),
@@ -70,25 +70,15 @@ class Warehouse:
             return None
         return next(iter(self.stock))
 
-    def has_stock(self):
-        return len(self.stock) > 0
-
 
 # ---------------- STATE PRINT ----------------
 def print_state(state: int) -> None:
     states = {
-        0: "s000_initialize",
-        1: "s001_not_homed",
-        10: "s010_homing",
-        100: "s100_braking",
-        101: "s101_waiting_at_home",
-        110: "s110_moving_to_imaging",
-        120: "s120_imaging",
-        130: "s130_moving_to_slot",
-        140: "s140_waiting_in_slot",
-        150: "s150_moving_to_home",
+        101: "HOME",
+        120: "IMAGING",
+        140: "SLOT",
     }
-    print(states.get(state, "Unknown state"))
+    print(states.get(state, f"State {state}"))
 
 
 # ---------------- AUTO TRANSFER ----------------
@@ -99,17 +89,17 @@ def auto_transfer(client, warehouse):
     if not item:
         return False
 
-    print(f"Auto transferring 1 of {item}")
+    print(f"Transferring 1 of {item}")
 
-    # imaging position
+    # FROM imaging
     src_x = 160.0
     src_y = 260.0
 
-    # storage position (top box)
+    # TO storage (top area)
     dst_x, dst_y = STORAGE_SLOTS[slot_index % len(STORAGE_SLOTS)]
     slot_index += 1
 
-    print(f"Moving to storage at ({dst_x}, {dst_y})")
+    print(f"To storage: ({dst_x}, {dst_y})")
 
     client.write_symbol(REMOTE_SRC_X, src_x)
     client.write_symbol(REMOTE_SRC_Y, src_y)
@@ -131,7 +121,6 @@ def main() -> None:
     client = ADSClient(local_ams_net_id=LOCAL_NET_ID)
     warehouse = Warehouse()
 
-    # user input
     item = input("Enter item name: ")
     qty = int(input("Enter quantity: "))
     warehouse.add_item(item, qty)
@@ -143,18 +132,20 @@ def main() -> None:
             target_ams_port=PLC_PORT
         )
 
-        device_info = client.read_device_info()
-        print(f"Connected to: {device_info.device_name}")
+        print("Connected")
 
         state_prev = None
         pallet_sent = False
         transfer_done = False
         released = False
 
-        # controlled loop
-        while processed_items < MAX_ITEMS:
-
+        while True:
             state = client.read_symbol(CONVEYOR_STATE)
+
+            # STOP FIRST (prevents looping)
+            if processed_items >= MAX_ITEMS:
+                print("Processed 2 items. Program exiting.")
+                break
 
             if state != state_prev:
                 print_state(state)
@@ -163,7 +154,6 @@ def main() -> None:
             # HOME
             if state == 101 and not pallet_sent:
                 client.write_symbol(REMOTE_SEND_PALLET, True)
-
                 pallet_sent = True
                 transfer_done = False
                 released = False
@@ -177,26 +167,19 @@ def main() -> None:
                     released = True
 
                 elif not transfer_done:
-                    success = auto_transfer(client, warehouse)
-                    if success:
+                    if auto_transfer(client, warehouse):
                         transfer_done = True
 
-            # SLOT → return home
+            # SLOT
             elif state == 140 and pallet_sent:
                 client.write_symbol(REMOTE_RETURN_PALLET, True)
-
                 pallet_sent = False
                 sleep(1.0)
 
             sleep(0.3)
 
-        print("Processed 2 items. Program finished.")
-
     except KeyboardInterrupt:
         print("Stopped by user")
-
-    except Exception as exc:
-        print(f"Error: {exc}")
 
     finally:
         client.close()
