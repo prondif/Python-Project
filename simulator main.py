@@ -130,9 +130,6 @@ def auto_transfer(client, warehouse):
 
     processed_items += 1
 
-    if processed_items >= 2:
-        print("All boxes stored")
-        sys.exit()
 
     return True
 
@@ -239,6 +236,14 @@ def main():
                 released = False
 
                 sleep(1.0)
+
+                if processed_items >= MAX_ITEMS:
+                    print("All boxes stored")
+
+                    sleep(5)
+
+                    break
+
 
             sleep(0.2)
 
