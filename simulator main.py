@@ -37,8 +37,8 @@ REMOTE_DST_Y = ADSSymbol("Remote.dst_y", LREAL)
 # ---------------- STORAGE COORDINATES ----------------
 # Top white storage area
 STORAGE_SLOTS = [
-    (260.0, 120.0),
-    (320.0, 120.0),
+    (160.0, 200.0),
+    (160.0, 200.0),
 ]
 
 slot_index = 0
@@ -125,10 +125,14 @@ def auto_transfer(client, warehouse):
 
     sleep(0.5)
 
-    # Move ONE blue box to storage
+    # Transfer ONE blue box
     client.write_symbol(REMOTE_TRANSFER_ITEM, True)
 
-    sleep(1.0)
+    sleep(0.5)
+
+    client.write_symbol(REMOTE_TRANSFER_ITEM, False)
+
+    sleep(0.5)
 
     warehouse.remove_item(item, 1)
 
@@ -172,7 +176,7 @@ def main():
         while True:
 
             # STOP AFTER 2 BOXES
-            if processed_items >= MAX_ITEMS:
+            if processed_items >= 2:
                 print("All boxes stored")
                 break
 
@@ -187,12 +191,16 @@ def main():
             if (
                 state == 101
                 and not pallet_sent
-                and processed_items < MAX_ITEMS
+                and processed_items < 2
             ):
 
                 print("Sending pallet")
 
                 client.write_symbol(REMOTE_SEND_PALLET, True)
+
+                sleep(0.5)
+
+                client.write_symbol(REMOTE_SEND_PALLET, False)
 
                 pallet_sent = True
                 transfer_done = False
@@ -203,18 +211,22 @@ def main():
             # ---------------- IMAGING ----------------
             elif state == 120:
 
-                # Release pallet from imaging
+                # Release from imaging
                 if not released:
 
                     print("Releasing from imaging")
 
                     client.write_symbol(REMOTE_RELEASE, True)
 
+                    sleep(0.5)
+
+                    client.write_symbol(REMOTE_RELEASE, False)
+
                     released = True
 
                     sleep(0.5)
 
-                # Transfer ONE blue box into storage
+                # Transfer one box
                 elif not transfer_done:
 
                     success = auto_transfer(client, warehouse)
@@ -229,9 +241,13 @@ def main():
 
                 client.write_symbol(REMOTE_RETURN_PALLET, True)
 
+                sleep(0.5)
+
+                client.write_symbol(REMOTE_RETURN_PALLET, False)
+
                 pallet_sent = False
-                transfer_done = True
-                released = True
+                transfer_done = False
+                released = False
 
                 sleep(1.0)
 
