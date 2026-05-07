@@ -1,4 +1,4 @@
-"""Fully automatic ADS + Tier 1 Warehouse system (final version)"""
+"""Fully automatic ADS + Tier 1 Warehouse system"""
 
 from __future__ import annotations
 
@@ -34,15 +34,7 @@ REMOTE_DST_X = ADSSymbol("Remote.dst_x", LREAL)
 REMOTE_DST_Y = ADSSymbol("Remote.dst_y", LREAL)
 
 
-# ---------------- STORAGE COORDINATES ----------------
-# Top white storage area
-STORAGE_SLOTS = [
-    (160.0, 200.0),
-    (160.0, 200.0),
-]
-
-slot_index = 0
-
+# ---------------- SETTINGS ----------------
 MAX_ITEMS = 2
 processed_items = 0
 
@@ -97,7 +89,6 @@ def print_state(state: int):
 # ---------------- AUTO TRANSFER ----------------
 def auto_transfer(client, warehouse):
 
-    global slot_index
     global processed_items
 
     item = warehouse.get_any_item()
@@ -107,14 +98,15 @@ def auto_transfer(client, warehouse):
 
     print(f"Transferring 1 of {item}")
 
-    # Imaging coordinates
+    # Imaging position
     src_x = 160.0
     src_y = 260.0
 
-    # Storage coordinates
-    dst_x, dst_y = STORAGE_SLOTS[slot_index]
+    # Safe transfer position
+    dst_x = 160.0
+    dst_y = 200.0
 
-    print(f"To storage: ({dst_x}, {dst_y})")
+    print(f"Transfer position: ({dst_x}, {dst_y})")
 
     # Send coordinates
     client.write_symbol(REMOTE_SRC_X, src_x)
@@ -125,7 +117,7 @@ def auto_transfer(client, warehouse):
 
     sleep(0.5)
 
-    # Transfer ONE blue box
+    # Transfer ONE box
     client.write_symbol(REMOTE_TRANSFER_ITEM, True)
 
     sleep(0.5)
@@ -137,7 +129,6 @@ def auto_transfer(client, warehouse):
     warehouse.remove_item(item, 1)
 
     processed_items += 1
-    slot_index += 1
 
     return True
 
@@ -176,13 +167,13 @@ def main():
         while True:
 
             # STOP AFTER 2 BOXES
-            if processed_items >= 2:
+            if processed_items >= MAX_ITEMS:
                 print("All boxes stored")
                 break
 
             state = client.read_symbol(CONVEYOR_STATE)
 
-            # Print only when state changes
+            # Print state only when changed
             if state != state_prev:
                 print_state(state)
                 state_prev = state
@@ -191,7 +182,7 @@ def main():
             if (
                 state == 101
                 and not pallet_sent
-                and processed_items < 2
+                and processed_items < MAX_ITEMS
             ):
 
                 print("Sending pallet")
@@ -211,7 +202,7 @@ def main():
             # ---------------- IMAGING ----------------
             elif state == 120:
 
-                # Release from imaging
+                # Release pallet
                 if not released:
 
                     print("Releasing from imaging")
