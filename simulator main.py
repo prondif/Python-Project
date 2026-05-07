@@ -225,17 +225,21 @@ def main():
 
                 print("Returning pallet to home")
 
+                print("Sending return command")
+
                 client.write_symbol(REMOTE_RETURN_PALLET, True)
 
-                sleep(0.5)
+                sleep(2.0)
 
                 client.write_symbol(REMOTE_RETURN_PALLET, False)
+
+                print("Return command finished")
 
                 pallet_sent = False
                 transfer_done = False
                 released = False
 
-                sleep(1.0)
+                sleep(2.0)
 
                 if processed_items >= MAX_ITEMS:
                     print("All boxes stored")
