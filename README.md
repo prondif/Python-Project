@@ -1,18 +1,31 @@
 # Warehouse Management System (Tier 2)
 
-This program simulates a warehouse using FIFO (First In, First Out).
+This program simulates an automated warehouse system using FIFO
+(First In, First Out) batch handling together with ADS communication.
 
 ## Features
 - Add stock in batches
 - Remove stock using FIFO logic
-- Display current stock and total quantity
+- Automatic pallet movement
+- Imaging and transfer operations
+- Display current stock and quantity
+- Return pallet to home position automatically
 
 ## How it works
-Each batch is stored as an object.  
-When removing stock, the system always removes from the oldest batch first.
+Each stock batch is stored as an object.
+
+When removing stock, the system always removes items from
+the oldest batch first.
+
+The simulator communicates with Python through ADS signals
+to automate warehouse operations.
+
+## Workflow
+HOME -> IMAGING -> TRANSFER -> STORAGE -> HOME
 
 ## How to run
 Run the file:
+
 wms.py
 
-Then follow the menu instructions.
+Then follow the terminal instructions.
