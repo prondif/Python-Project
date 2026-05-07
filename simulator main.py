@@ -106,11 +106,11 @@ def auto_transfer(client, warehouse):
 
     print(f"Transferring 1 of {item}")
 
-    # Source position (home pallet)
+    # FROM imaging area
     src_x = 160.0
-    src_y = 410.0
+    src_y = 260.0
 
-    # Storage position
+    # TO storage slots
     dst_x, dst_y = STORAGE_SLOTS[slot_index]
 
     print(f"Transfer position: ({dst_x}, {dst_y})")
@@ -122,13 +122,14 @@ def auto_transfer(client, warehouse):
     client.write_symbol(REMOTE_DST_X, dst_x)
     client.write_symbol(REMOTE_DST_Y, dst_y)
 
-    sleep(0.5)
+    sleep(1.0)
 
-    # Transfer ONE box
+    # Start transfer
     client.write_symbol(REMOTE_TRANSFER_ITEM, True)
 
-    sleep(0.5)
+    sleep(1.5)
 
+    # Stop transfer
     client.write_symbol(REMOTE_TRANSFER_ITEM, False)
 
     sleep(1.0)
