@@ -36,13 +36,14 @@ REMOTE_DST_Y = ADSSymbol("Remote.dst_y", LREAL)
 
 # ---------------- STORAGE (TOP BOX) ----------------
 STORAGE_SLOTS = [
-    (260.0, 120.0),
-    (300.0, 120.0),
+    (140.0, 120.0),
+    (180.0, 120.0),
 ]
 
 slot_index = 0
-processed_items = 0
+
 MAX_ITEMS = 2
+processed_items = 0
 
 
 # ---------------- WAREHOUSE ----------------
@@ -59,6 +60,7 @@ class Warehouse:
             return False
 
         self.stock[name] -= qty
+
         if self.stock[name] == 0:
             del self.stock[name]
 
@@ -68,6 +70,7 @@ class Warehouse:
     def get_any_item(self):
         if not self.stock:
             return None
+
         return next(iter(self.stock))
 
 
@@ -78,14 +81,18 @@ def print_state(state: int) -> None:
         120: "IMAGING",
         140: "SLOT",
     }
+
     print(states.get(state, f"State {state}"))
 
 
 # ---------------- AUTO TRANSFER ----------------
 def auto_transfer(client, warehouse):
-    global slot_index, processed_items
+
+    global slot_index
+    global processed_items
 
     item = warehouse.get_any_item()
+
     if not item:
         return False
 
@@ -95,9 +102,8 @@ def auto_transfer(client, warehouse):
     src_x = 160.0
     src_y = 260.0
 
-    # TO storage (top area)
-    dst_x, dst_y = STORAGE_SLOTS[slot_index % len(STORAGE_SLOTS)]
-    slot_index += 1
+    # TO storage
+    dst_x, dst_y = STORAGE_SLOTS[slot_index]
 
     print(f"To storage: ({dst_x}, {dst_y})")
 
@@ -107,25 +113,35 @@ def auto_transfer(client, warehouse):
     client.write_symbol(REMOTE_DST_Y, dst_y)
 
     sleep(0.3)
+
     client.write_symbol(REMOTE_TRANSFER_ITEM, True)
-    sleep(0.6)
+
+    sleep(0.8)
 
     warehouse.remove_item(item, 1)
+
     processed_items += 1
+    slot_index += 1
 
     return True
 
 
 # ---------------- MAIN ----------------
 def main() -> None:
+
+    global processed_items
+
     client = ADSClient(local_ams_net_id=LOCAL_NET_ID)
+
     warehouse = Warehouse()
 
     item = input("Enter item name: ")
     qty = int(input("Enter quantity: "))
+
     warehouse.add_item(item, qty)
 
     try:
+
         client.open(
             target_ip=PLC_IP,
             target_ams_net_id=PLC_NET_ID,
@@ -135,48 +151,75 @@ def main() -> None:
         print("Connected")
 
         state_prev = None
+
         pallet_sent = False
         transfer_done = False
         released = False
 
         while True:
-            state = client.read_symbol(CONVEYOR_STATE)
 
-            # STOP FIRST (prevents looping)
+            # STOP PROGRAM AFTER 2 ITEMS
             if processed_items >= MAX_ITEMS:
                 print("Processed 2 items. Program exiting.")
                 break
+
+            state = client.read_symbol(CONVEYOR_STATE)
 
             if state != state_prev:
                 print_state(state)
                 state_prev = state
 
-            # HOME
-            if state == 101 and not pallet_sent:
+            # ---------------- HOME ----------------
+            if (
+                state == 101
+                and not pallet_sent
+                and processed_items < MAX_ITEMS
+            ):
+
+                print("Sending pallet")
+
                 client.write_symbol(REMOTE_SEND_PALLET, True)
+
                 pallet_sent = True
                 transfer_done = False
                 released = False
 
-            # IMAGING
+                sleep(0.5)
+
+            # ---------------- IMAGING ----------------
             elif state == 120:
 
+                # Release pallet once
                 if not released:
+
+                    print("Releasing from imaging")
+
                     client.write_symbol(REMOTE_RELEASE, True)
-                    sleep(0.3)
+
                     released = True
 
+                    sleep(0.5)
+
+                # Transfer once
                 elif not transfer_done:
-                    if auto_transfer(client, warehouse):
+
+                    success = auto_transfer(client, warehouse)
+
+                    if success:
                         transfer_done = True
 
-            # SLOT
+            # ---------------- SLOT ----------------
             elif state == 140 and pallet_sent:
+
+                print("Returning pallet to home")
+
                 client.write_symbol(REMOTE_RETURN_PALLET, True)
+
                 pallet_sent = False
+
                 sleep(1.0)
 
-            sleep(0.3)
+            sleep(0.2)
 
     except KeyboardInterrupt:
         print("Stopped by user")
