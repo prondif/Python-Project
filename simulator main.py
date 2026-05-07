@@ -42,7 +42,7 @@ processed_items = 0
 # ---------------- STORAGE SLOTS ----------------
 STORAGE_SLOTS = [
     (220.0, 200.0),
-    (260.0, 200.0),
+    (260.0, 205.0),
 ]
 
 slot_index = 0
