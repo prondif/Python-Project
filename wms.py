@@ -70,6 +70,8 @@ class Warehouse:
 
         print(f"Added batch: {qty} of {name}")
 
+        self.show_stock()
+
     def remove_item(self, name, qty):
 
         if not self.batches:
@@ -87,6 +89,8 @@ class Warehouse:
         if oldest_batch.quantity == 0:
             self.batches.pop(0)
 
+        self.show_stock()
+
         return True
 
     def get_any_item(self):
@@ -95,6 +99,22 @@ class Warehouse:
             return None
 
         return self.batches[0].item_name
+
+    def show_stock(self):
+
+        print("\nCurrent Stock:")
+
+        if not self.batches:
+            print("Warehouse empty")
+            return
+
+        for index, batch in enumerate(self.batches, start=1):
+
+            print(
+                f"Batch {index}: "
+                f"{batch.item_name} | "
+                f"Qty = {batch.quantity}"
+            )
 
 
 # ---------------- STATE PRINT ----------------
@@ -171,6 +191,10 @@ def main():
     qty = int(input("Enter quantity: "))
 
     warehouse.add_item(item, qty)
+
+    # FIFO TEST BATCHES
+    warehouse.add_item("box", 3)
+    warehouse.add_item("box", 2)
 
     try:
 
