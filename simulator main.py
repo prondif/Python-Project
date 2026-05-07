@@ -39,6 +39,15 @@ MAX_ITEMS = 2
 processed_items = 0
 
 
+# ---------------- STORAGE SLOTS ----------------
+STORAGE_SLOTS = [
+    (220.0, 200.0),
+    (260.0, 200.0),
+]
+
+slot_index = 0
+
+
 # ---------------- WAREHOUSE ----------------
 class Warehouse:
 
@@ -90,6 +99,7 @@ def print_state(state: int):
 def auto_transfer(client, warehouse):
 
     global processed_items
+    global slot_index
 
     item = warehouse.get_any_item()
 
@@ -98,13 +108,12 @@ def auto_transfer(client, warehouse):
 
     print(f"Transferring 1 of {item}")
 
-    # Imaging position
+    # Source position (home pallet)
     src_x = 160.0
-    src_y = 260.0
+    src_y = 410.0
 
-    # Safe transfer position
-    dst_x = 160.0
-    dst_y = 200.0
+    # Storage position
+    dst_x, dst_y = STORAGE_SLOTS[slot_index]
 
     print(f"Transfer position: ({dst_x}, {dst_y})")
 
@@ -129,7 +138,7 @@ def auto_transfer(client, warehouse):
     warehouse.remove_item(item, 1)
 
     processed_items += 1
-
+    slot_index += 1
 
     return True
 
@@ -247,7 +256,6 @@ def main():
                     sleep(8)
 
                     break
-
 
             sleep(0.2)
 
