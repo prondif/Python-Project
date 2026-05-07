@@ -36,8 +36,8 @@ REMOTE_DST_Y = ADSSymbol("Remote.dst_y", LREAL)
 
 # ---------------- STORAGE (TOP BOX) ----------------
 STORAGE_SLOTS = [
-    (140.0, 120.0),
-    (180.0, 120.0),
+    (260.0, 120.0),
+    (320.0, 120.0),
 ]
 
 slot_index = 0
@@ -216,8 +216,15 @@ def main() -> None:
                 client.write_symbol(REMOTE_RETURN_PALLET, True)
 
                 pallet_sent = False
+                transfer_done = True
+                released = True
 
                 sleep(1.0)
+                
+                # STOP after 2 transfers
+                if processed_items >= MAX_ITEMS:
+                    print("Finished all transfers")
+                    break
 
             sleep(0.2)
 
