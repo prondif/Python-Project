@@ -206,28 +206,22 @@ def main():
             # ---------------- IMAGING ----------------
             elif state == 120:
 
-                # Release pallet
-                if not released:
+                print("Releasing from imaging")
 
-                    print("Releasing from imaging")
+                client.write_symbol(REMOTE_RELEASE, True)
 
-                    client.write_symbol(REMOTE_RELEASE, True)
+                sleep(0.5)
 
-                    sleep(0.5)
+                client.write_symbol(REMOTE_RELEASE, False)
 
-                    client.write_symbol(REMOTE_RELEASE, False)
+                sleep(0.5)
 
-                    released = True
+                success = auto_transfer(client, warehouse)
 
-                    sleep(0.5)
+                if success:
+                    transfer_done = True
 
-                # Transfer one box
-                elif not transfer_done:
-
-                    success = auto_transfer(client, warehouse)
-
-                    if success:
-                        transfer_done = True
+                sleep(1.0)
 
             # ---------------- SLOT ----------------
             elif state == 140 and pallet_sent:
