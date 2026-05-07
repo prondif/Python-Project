@@ -34,7 +34,8 @@ REMOTE_DST_X = ADSSymbol("Remote.dst_x", LREAL)
 REMOTE_DST_Y = ADSSymbol("Remote.dst_y", LREAL)
 
 
-# ---------------- STORAGE (TOP BOX) ----------------
+# ---------------- STORAGE COORDINATES ----------------
+# Top white storage area
 STORAGE_SLOTS = [
     (260.0, 120.0),
     (320.0, 120.0),
@@ -48,6 +49,7 @@ processed_items = 0
 
 # ---------------- WAREHOUSE ----------------
 class Warehouse:
+
     def __init__(self):
         self.stock = {}
 
@@ -56,7 +58,11 @@ class Warehouse:
         print(f"Added {qty} of {name}")
 
     def remove_item(self, name, qty):
-        if name not in self.stock or self.stock[name] < qty:
+
+        if name not in self.stock:
+            return False
+
+        if self.stock[name] < qty:
             return False
 
         self.stock[name] -= qty
@@ -65,9 +71,11 @@ class Warehouse:
             del self.stock[name]
 
         print(f"Removed {qty} of {name}")
+
         return True
 
     def get_any_item(self):
+
         if not self.stock:
             return None
 
@@ -75,7 +83,8 @@ class Warehouse:
 
 
 # ---------------- STATE PRINT ----------------
-def print_state(state: int) -> None:
+def print_state(state: int):
+
     states = {
         101: "HOME",
         120: "IMAGING",
@@ -98,25 +107,28 @@ def auto_transfer(client, warehouse):
 
     print(f"Transferring 1 of {item}")
 
-    # FROM imaging
+    # Imaging coordinates
     src_x = 160.0
     src_y = 260.0
 
-    # TO storage
+    # Storage coordinates
     dst_x, dst_y = STORAGE_SLOTS[slot_index]
 
     print(f"To storage: ({dst_x}, {dst_y})")
 
+    # Send coordinates
     client.write_symbol(REMOTE_SRC_X, src_x)
     client.write_symbol(REMOTE_SRC_Y, src_y)
+
     client.write_symbol(REMOTE_DST_X, dst_x)
     client.write_symbol(REMOTE_DST_Y, dst_y)
 
-    sleep(0.3)
+    sleep(0.5)
 
+    # Move ONE blue box to storage
     client.write_symbol(REMOTE_TRANSFER_ITEM, True)
 
-    sleep(0.8)
+    sleep(1.0)
 
     warehouse.remove_item(item, 1)
 
@@ -127,7 +139,7 @@ def auto_transfer(client, warehouse):
 
 
 # ---------------- MAIN ----------------
-def main() -> None:
+def main():
 
     global processed_items
 
@@ -135,6 +147,7 @@ def main() -> None:
 
     warehouse = Warehouse()
 
+    # USER INPUT
     item = input("Enter item name: ")
     qty = int(input("Enter quantity: "))
 
@@ -158,13 +171,14 @@ def main() -> None:
 
         while True:
 
-            # STOP PROGRAM AFTER 2 ITEMS
+            # STOP AFTER 2 BOXES
             if processed_items >= MAX_ITEMS:
-                print("Processed 2 items. Program exiting.")
+                print("All boxes stored")
                 break
 
             state = client.read_symbol(CONVEYOR_STATE)
 
+            # Print only when state changes
             if state != state_prev:
                 print_state(state)
                 state_prev = state
@@ -189,7 +203,7 @@ def main() -> None:
             # ---------------- IMAGING ----------------
             elif state == 120:
 
-                # Release pallet once
+                # Release pallet from imaging
                 if not released:
 
                     print("Releasing from imaging")
@@ -200,7 +214,7 @@ def main() -> None:
 
                     sleep(0.5)
 
-                # Transfer once
+                # Transfer ONE blue box into storage
                 elif not transfer_done:
 
                     success = auto_transfer(client, warehouse)
@@ -220,11 +234,6 @@ def main() -> None:
                 released = True
 
                 sleep(1.0)
-                
-                # STOP after 2 transfers
-                if processed_items >= MAX_ITEMS:
-                    print("Finished all transfers")
-                    break
 
             sleep(0.2)
 
