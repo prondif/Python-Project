@@ -214,10 +214,6 @@ def main():
 
         while True:
 
-            # STOP AFTER 2 BOXES
-            if processed_items >= MAX_ITEMS:
-                print("All boxes stored")
-                break
 
             state = client.read_symbol(CONVEYOR_STATE)
 
