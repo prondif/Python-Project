@@ -42,7 +42,7 @@ processed_items = 0
 # ---------------- STORAGE SLOTS ----------------
 STORAGE_SLOTS = [
     (220.0, 200.0),
-    (220.0, 200.0),
+    (280.0, 200.0),
 ]
 
 slot_index = 0
@@ -176,10 +176,6 @@ def main():
 
         while True:
 
-            # STOP AFTER 2 BOXES
-            if processed_items >= MAX_ITEMS:
-                print("All boxes stored")
-                break
 
             state = client.read_symbol(CONVEYOR_STATE)
 
@@ -251,9 +247,12 @@ def main():
                 sleep(2.0)
 
                 if processed_items >= MAX_ITEMS:
-                    print("All boxes stored")
 
-                    sleep(8)
+                    print("Waiting for pallet to return home")
+
+                    sleep(10)
+
+                    print("All boxes stored")
 
                     break
 
