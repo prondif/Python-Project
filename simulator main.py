@@ -240,7 +240,7 @@ def main():
                 if processed_items >= MAX_ITEMS:
                     print("All boxes stored")
 
-                    sleep(5)
+                    sleep(8)
 
                     break
 
